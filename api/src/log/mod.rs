@@ -1,5 +1,6 @@
 use regex;
 use regex::Regex;
+use std::borrow::Cow;
 use std::collections::HashMap;
 use std::error::Error;
 use std::fs::File;
@@ -16,7 +17,8 @@ include!("language.rs");
 pub struct Log {
     fpath:     PathBuf,
     size:      u64,
-    lastpos:   u64,
+    offset:    u64,
+    modified:  u64,
     // is_multiline: bool,
     user_id:   u32,
     user_name: String,
@@ -32,8 +34,8 @@ impl Log {
         let mut this = Self {
             fpath:     fpath,
             size:      meta.len(),
-            lastpos:   0,
-            // is_multiline: false,
+            offset:    0,
+            modified:  0,
             user_id:   0,
             user_name: "".into(),
             ignored:   false,
@@ -61,17 +63,13 @@ impl Log {
             .unwrap()
             .as_secs();
 
-        let time_to_old: u64 = 60 * 360; // 120 minuts
-        let cur_time = SystemTime::now()
-            .duration_since(time::UNIX_EPOCH)
-            .unwrap()
-            .as_secs();
+        // let time_to_old: u64 = 60 * 360; // 120 minuts
+        // let cur_time = SystemTime::now()
+        //     .duration_since(time::UNIX_EPOCH)
+        //     .unwrap()
+        //     .as_secs();
 
-        // помечаем фал для игнора, если он давно не обновлялся
-        // if (cur_time - last_modified) > time_to_old {
-        //     self.ignored = true;
-        //     self.error = "to old".to_string();
-        // }
+        self.modified = last_modified;
     }
 
     fn check_filename(&mut self) {
@@ -170,8 +168,8 @@ impl Log {
                     if !line.contains("------------") {
                         err = true;
                     }
-                    self.lastpos = offset as u64;
-                    // self.lastpos = reader.stream_position().unwrap();
+                    self.offset = offset as u64;
+                    // self.offset = reader.stream_position().unwrap();
                 }
                 _ => {
                     break;
@@ -189,8 +187,15 @@ impl Log {
     fn is_changed(&mut self) -> bool {
         let meta = self.fpath.metadata().unwrap();
 
-        println!("\tfile len: {:?}\nlast offset: {:?}", meta.len(), self.size);
-        if meta.len() > self.lastpos {
+        let modified = meta
+            .modified()
+            .unwrap()
+            .duration_since(time::UNIX_EPOCH)
+            .unwrap()
+            .as_secs();
+
+        if meta.len() > self.offset {
+            self.size = meta.len();
             return true;
         } else {
             return false;
@@ -211,55 +216,72 @@ impl Log {
             return;
         }
 
+        // FIXME: надо будет ещё добавить проверку на уменьшение файла с момента последнего чтения. если такое произошло, то наверно надо вообще пересоздавать объект или помечать этот как error
+
         let file = File::open(&self.fpath).unwrap();
         let mut reader = BufReader::new(file);
 
-        reader.seek(SeekFrom::Start(self.lastpos)).unwrap();
+        reader.seek(SeekFrom::Start(self.offset)).unwrap();
 
         let mut i = 0;
         let mut line = String::new();
         while let Ok(num) = reader.read_line(&mut line) {
-            i = i + 1;
             if num == 0 {
                 // EOF check
+                line.clear();
                 break;
             }
+            i = i + 1;
+            self.offset = self.offset + (num as u64);
 
-            self.parse_line(line.clone());
-
-            if i == 2 {
-                break;
-            }
+            // self.parse_line(line.clone());
+            println!("----------------------------------------------------");
+            println!("{:?}", self.log_line_normalizer(&line));
 
             line.clear();
+            // важный момент - читаем не пока reader выдаёт нам строки, а только до self.size.
+            // если во время нашего чтения из файла в него будут добавлены ещё строки, то reader сможет прочитать и их, без пересоздания BufReader, а это выдаёт некоторые артефакты.
+            if self.size == self.offset {
+                break;
+            } else if self.offset > self.size {
+                panic!("read file: self.offset > self.size");
+            }
         }
         println!("parse: end");
-        println!("end: {:?}", &reader.stream_position().unwrap());
-        println!("fsize: {:?}", fs::metadata(&self.fpath).unwrap().len());
     }
 
     fn parse_line<'a>(&mut self, line: String) {
         //-> Vec<&str>
-        let nline = self.log_line_normalizer(line.as_str());
+        let nline = self.log_line_normalizer(&line);
 
         let mut arr: Vec<&str> = nline.split("█").collect();
 
         dbg!(&arr);
         // arr
     }
+    fn log_line_normalizer<'a>(&'a mut self, line: &String) -> String {
+        let re1 = regex::Regex::new(r"<.*?>").unwrap();
+        let re2 = regex::Regex::new(r"█?[\s-]+█").unwrap();
+        let re3 = regex::Regex::new(r"█[\s-]+").unwrap();
+        let re4 = regex::Regex::new(r"█+").unwrap();
 
-    fn log_line_normalizer<'a>(&'a mut self, line: &'a str) -> &'a str {
-        line
-        // let re1 = regex::Regex::new(r"<.*?>").unwrap();
-        // let re2 = regex::Regex::new(r"█?[\s-]+█").unwrap();
-        // let re3 = regex::Regex::new(r"█[\s-]+").unwrap();
-        // let re4 = regex::Regex::new(r"█+").unwrap();
+        let mut nline: Cow<str> = line.into();
 
-        // let mut nline = &re1.replace_all(&line, "█").into_owned();
-        // nline = &re2.replace_all(&nline, "█").into_owned();
-        // nline = &re3.replace_all(&nline, "█").into_owned();
-        // nline = &re4.replace_all(&nline, "█").into_owned();
+        nline = replaceall_cow(nline, &re1, "█");
+        nline = replaceall_cow(nline, &re2, "█");
+        nline = replaceall_cow(nline, &re3, "█");
+        nline = replaceall_cow(nline, &re4, "█");
 
-        // nline
+        nline.into_owned()
     }
+}
+
+fn replaceall_cow<'a>(cow: Cow<'a, str>, regex: &Regex, replacement: &str) -> Cow<'a, str> {
+    match cow {
+        Cow::Borrowed(s) => regex.replace_all(s, replacement),
+        Cow::Owned(s) => Cow::Owned(regex.replace_all(&s, replacement).into_owned()),
+    }
+}
+fn dbg<T>(_: &T) {
+    println!("{}", std::any::type_name::<T>())
 }
