@@ -5,5 +5,8 @@
 #![allow(deprecated)]
 #![allow(unused_assignments)]
 
+#[macro_use]
+extern crate lazy_static;
+
 pub mod esi;
 pub mod log;

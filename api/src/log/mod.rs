@@ -20,7 +20,7 @@ pub struct Log {
     pub user_id:   u64,
     pub user_name: String,
     pub ignored:   bool,
-    pub language:  String,
+    pub language:  &'static str,
 }
 
 impl Log {
@@ -53,13 +53,21 @@ impl Log {
             }
         }
 
+        let language: &'static str;
+        match lreader.get_language() {
+            Err(e) => return Err(e),
+            Ok(v) => {
+                language = v;
+            }
+        }
+
         let mut this = Self {
             log_reader: lreader,
             file_path:  file_path,
             user_name:  details.0,
             user_id:    details.1,
             ignored:    false,
-            language:   "".into(),
+            language:   language,
         };
 
         Ok(this)
@@ -104,7 +112,9 @@ impl Log {
         let re2 = regex::Regex::new(r"█?[\s-]+█").unwrap();
         let re3 = regex::Regex::new(r"█[\s-]+").unwrap();
         let re4 = regex::Regex::new(r"█+").unwrap();
-        let re5 = regex::Regex::new(r"█$").unwrap();
+        let re5 = regex::Regex::new(r"[█\.,*]+$").unwrap();
+        let re6 = regex::Regex::new(r"\s-\s").unwrap(); //<Weapon_name> - <Hit_type>
+        let re7 = regex::Regex::new(r"[\.,*]*█[\.,\+\-*]*").unwrap();
 
         let mut nline: Cow<str> = line.into();
 
@@ -114,6 +124,7 @@ impl Log {
         nline = replaceall_cow(nline, &re3, "█");
         nline = replaceall_cow(nline, &re4, "█");
         nline = replaceall_cow(nline, &re5, "");
+        nline = replaceall_cow(nline, &re7, "█");
 
         nline.into_owned()
     }
@@ -135,9 +146,109 @@ impl Log {
         let time = &arr[0][2..21];
         let message_type = &arr[0][25..31];
 
+        let lang = LOGLANGUAGE.get(self.language).unwrap();
+
         match message_type {
             "combat" => {
-                println!(":{}:{:?}", arr.len(), &nline);
+                // println!("\n:{}:{:?}", arr.len(), &nline);
+
+                match arr.len() {
+                    5 => {
+                        // :5:"[ 2022.06.30 19:47:05 ] (combat)█39█from█Anchoring Damavik█Glances Off"
+                        // <0:time+other> | <1:damage> | <2:from> | <3:enemy_name> | <4:hit_type>
+                        //
+                        // :5:"[ 2022.06.30 19:33:15 ] (combat)█20 GJ█energy neutralized█Faded Hypnosian Warden█Faded Hypnosian Warden"
+                        // <0:time+other> | <1:energy_amounte> | <2:action> | <3:enemy_name> | <4:enemy_name>
+                        if arr[2] == lang.damage_in {
+                            println!("\ndamage_in_pve\n:{}:{nline:?}\n{arr:?}", arr.len());
+                        } else if arr[2] == lang.cap_neutralized_in {
+                            println!("\ncap_neut_in\n:{}:{nline:?}\n{arr:?}", arr.len());
+                        } else {
+                            println!("\n5:UNSUPORTED\n:{}:{nline:?}\n{arr:?}", arr.len());
+                        }
+                    }
+                    6 => {
+                        // <0:time+other> | <1:damage> | <2:to|from|action> | <3:enemy_name> | <4:weapon_type> | <5:hit_type>
+                        if arr[2] == lang.damage_in && arr[4] == lang.damage_out {
+                            // :6:"[ 2022.01.19 18:31:06 ] (combat)█Warp scramble attempt█from█Raznaborg Anchoring Damavik█to█State Navy Rook"
+                            println!("\nmodule use\n:{}:{nline:?}\n{arr:?}", arr.len());
+                        } else if arr[2] == lang.damage_out {
+                            println!("\ndamage_out\n:{}:{nline:?}\n{arr:?}", arr.len());
+                        } else if arr[2] == lang.damage_in {
+                            println!("\ndamage_in_pvp\n:{}:{nline:?}\n{arr:?}", arr.len());
+                        } else {
+                            // UNSUPORTED
+                            println!("\n6:UNSUPORTED\n:{}:{nline:?}\n{arr:?}", arr.len());
+                        }
+                    }
+                    8 => {
+                        if arr[2] == lang.armor_repaired_out {
+                            println!("\narmor_repaired_out\n:{}:{nline:?}\n{arr:?}", arr.len());
+                        } else if arr[2] == lang.hull_repaired_out {
+                            println!("\nhull_repaired_out\n:{}:{nline:?}\n{arr:?}", arr.len());
+                        } else if arr[2] == lang.shield_boosted_out {
+                            println!("\nshield_boosted_out\n:{}:{nline:?}\n{arr:?}", arr.len());
+                        } else if arr[2] == lang.armor_repaired_in {
+                            println!("\narmor_repaired_in\n:{}:{nline:?}\n{arr:?}", arr.len());
+                        } else if arr[2] == lang.hull_repaired_in {
+                            println!("\nhull_repaired_in\n:{}:{nline:?}\n{arr:?}", arr.len());
+                        } else if arr[2] == lang.shield_boosted_in {
+                            println!("\nshield_boosted_in\n:{}:{nline:?}\n{arr:?}", arr.len());
+                        } else if arr[2] == lang.cap_transfered_out {
+                            println!("\ncap_transfered_out\n:{}:{nline:?}\n{arr:?}", arr.len());
+                        } else if arr[2] == lang.cap_neutralized_out {
+                            println!("\ncap_neutralized_out\n:{}:{nline:?}\n{arr:?}", arr.len());
+                        } else if arr[2] == lang.nos_recieved {
+                            println!("\nnos_recieved\n:{}:{nline:?}\n{arr:?}", arr.len());
+                        } else if arr[2] == lang.cap_transfered_in {
+                            println!("\ncap_transfered_in\n:{}:{nline:?}\n{arr:?}", arr.len());
+                        } else if arr[2] == lang.cap_neutralized_in {
+                            println!("\ncap_neutralized_in\n:{}:{nline:?}\n{arr:?}", arr.len());
+                        } else if arr[2] == lang.nos_taken {
+                            println!("\nnos_taken\n:{}:{nline:?}\n{arr:?}", arr.len());
+                        } else {
+                            // UNSUPORTED
+                            println!("\n8:UNSUPORTED\n:{}:{nline:?}\n{arr:?}", arr.len());
+                        }
+                    }
+                    _ => {}
+                }
+                // damage_out,          :r#"to"#,
+                // damage_in,           :r#"from"#,
+                // armor_repaired_out,  :r#"remote armor repaired to"#,
+                // hull_repaired_out,   :r#"remote hull repaired to"#,
+                // shield_boosted_out,  :r#"remote shield boosted to"#,
+                // armor_repaired_in,   :r#"remote armor repaired by"#,
+                // hull_repaired_in,    :r#"remote hull repaired by"#,
+                // shield_boosted_in,   :r#"remote shield boosted by"#,
+                // cap_transfered_out,  :r#"remote capacitor transmitted to"#,
+                // cap_neutralized_out, :r#"energy neutralized"#,
+                // nos_recieved,        :r#"energy drained from"#,
+                // cap_transfered_in,   :r#"remote capacitor transmitted by"#,
+                // cap_neutralized_in,  :r#"energy neutralized"#,
+                // nos_taken,           :r#"energy drained to"#,
+                // IN damage
+                // :5:"[ 2022.06.30 19:47:05 ] (combat)█39█from█Anchoring Damavik█Glances Off"
+                // IN energy neutralized
+                // :5:"[ 2022.06.30 19:33:15 ] (combat)█20 GJ█energy neutralized█Faded Hypnosian Warden█Faded Hypnosian Warden"
+
+                // OUT damage
+                // :6:"[ 2022.06.30 19:46:39 ] (combat)█1814█to█Raznaborg Blinding Leshak█Veles Supratidal Entropic Disintegrator█Smashes"
+                // IN damage(pvp)
+                // :6:"[ 2022.06.30 21:03:29 ] (combat)█82█from█Username[CTAG](Vargur)█Imperial Navy Large EMP Smartbomb█Hits"
+                // IN module(pve - pvp ???)
+                // :6:"[ 2022.01.19 18:31:06 ] (combat)█Warp scramble attempt█from█Raznaborg Anchoring Damavik█to█State Navy Rook"
+
+                // IN module use
+                // :8:"[ 2022.06.30 19:47:13 ] (combat)█351█remote capacitor transmitted by█Leshak█[REKTD]█[PSST.]█[Dalliloule Nardieu]█Large Remote Capacitor Transmitter II"
+                // :8:"[ 2022.06.30 19:47:21 ] (combat)█640█remote armor repaired by█Leshak█[REKTD]█[PSST.]█[Dalliloule Nardieu]█Large Remote Armor Repairer II"
+
+                // OUT module use
+                // :8:"[ 2022.06.30 19:47:21 ] (combat)█351█remote capacitor transmitted to█Leshak█[REKTD]█[SPSFC]█[FWC]█Large Remote Capacitor Transmitter II"
+                // :8:"[ 2022.06.30 19:47:14 ] (combat)█257█remote armor repaired to█Leshak█[REKTD]█[PSST.]█[Dalliloule Nardieu]█Large Remote Armor Repairer II"
+
+                // ????
+                // :8:"[ 2022.06.30 20:34:35 ] (combat)█Warp scramble attempt█from█Hospodar Anchoring Damavik█to█Paladin█[WTFNA]█[VLAD86]"
             }
             "None) " => {}
             "questi" => {}
@@ -184,7 +295,7 @@ impl LogReader {
 
         // this.check_filename();
         if let Err(e) = this.check_header() {
-            return Err(e); //FIXME: опять проблема с обоссаной ссылкой. решить потом.
+            return Err(e);
         }
 
         Ok(this)
@@ -384,6 +495,16 @@ impl LogReader {
         arr
     }
 
+    pub fn get_language(&mut self) -> Result<&'static str, &'static str> {
+        let mut language: &str;
+        for (k, v) in &*LOGLANGUAGE {
+            if self.header[2].contains(v.character) {
+                return Ok(k);
+            }
+        }
+        return Err("problem with detecting language");
+    }
+
     pub fn check_header(&mut self) -> Result<(), &'static str> {
         // let lang: Vec<LogLanguage> = generate_language();
 
@@ -438,22 +559,6 @@ impl LogReader {
                     if !re.is_match(&line) {
                         return Err("Header parse error: line #2");
                     }
-                    // // println!("\tline:{:?}", line.trim());
-                    // let mut m = 0;
-                    // for re in &lang {
-                    //     if !re.character.is_match(&line) {
-                    //         continue;
-                    //     }
-
-                    //     if let Some(cap) = re.character.captures(&line) {
-                    //         // println!("\t+ {:?}", re.language);
-                    //         // self.language = re.language.clone();
-                    //         // self.user_name = cap.get(1).unwrap().as_str().to_owned();
-                    //         break;
-                    //     } else {
-                    //         // println!("\t- {:?}", re.language);
-                    //     }
-                    // }
                 }
                 3 => {
                     // =~/\s\s.*\:\d{4}\.\d{2}\.\d{4}\s\d{2}\:\d{2}\:\d{2}\n/
