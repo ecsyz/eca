@@ -1,9 +1,9 @@
 use regex;
 use regex::Regex;
 use std::borrow::Cow;
-use std::collections::HashMap;
+use std::collections::{HashMap, VecDeque};
 use std::error::Error;
-use std::fs::File;
+use std::fs::{File, Metadata};
 use std::io::{self, prelude::*, BufReader, SeekFrom};
 use std::path::{Path, PathBuf};
 use std::result;
@@ -15,98 +15,395 @@ include!("language.rs");
 
 #[derive(Debug)]
 pub struct Log {
-    fpath:     PathBuf,
-    size:      u64,
-    offset:    u64,
-    modified:  u64,
-    // is_multiline: bool,
-    user_id:   u32,
-    user_name: String,
-    ignored:   bool,
-    language:  String,
-    error:     String,
+    log_reader: LogReader,
+    file_path:  PathBuf,
+    user_id:    u32,
+    user_name:  String,
+    ignored:    bool,
+    language:   String,
 }
 
 impl Log {
-    pub fn new(fpath: PathBuf) -> Self {
-        let meta = fpath.metadata().unwrap();
-
-        let mut this = Self {
-            fpath:     fpath,
-            size:      meta.len(),
-            offset:    0,
-            modified:  0,
-            user_id:   0,
-            user_name: "".into(),
-            ignored:   false,
-            language:  "".into(),
-            error:     "".into(),
-        };
-
-        this.check_modtime();
-        this.check_filename();
-        this.check_header();
-
-        this
-    }
-
-    fn check_modtime(&mut self) {
-        if self.ignored {
-            return;
+    pub fn new(file_path: PathBuf) -> Result<Self, &'static str> {
+        let meta: Metadata;
+        match file_path.metadata() {
+            Err(e) => {
+                // e.to_string().as_str()
+                return Err("cant get file metadata");
+            }
+            Ok(v) => {
+                meta = v;
+            }
         }
 
-        let meta = self.fpath.metadata().unwrap();
-        let last_modified = meta
-            .modified()
+        let mut lreader: LogReader;
+        //FIXME: закидывать наверно можно тупо ссылку
+        match LogReader::new(file_path.clone()) {
+            Err(e) => return Err(e),
+            Ok(v) => {
+                lreader = v;
+            }
+        }
+
+        let details: (String, u32);
+        match lreader.get_details() {
+            Err(e) => return Err(e),
+            Ok(v) => {
+                details = v;
+            }
+        }
+
+        let mut this = Self {
+            log_reader: lreader,
+            file_path:  file_path,
+            user_name:  details.0,
+            user_id:    details.1,
+            ignored:    false,
+            language:   "".into(),
+        };
+
+        Ok(this)
+    }
+
+    pub fn is_changed(&mut self) -> bool {
+        self.log_reader.is_changed()
+    }
+
+    pub fn parse(&mut self) {
+        println!("parse: start");
+
+        // if !self.is_changed() {
+        //     println!("parse: end(not changed)");
+        //     return;
+        // }
+
+        // // FIXME: надо будет ещё добавить проверку на уменьшение файла с момента последнего чтения. если такое произошло, то наверно надо вообще пересоздавать объект или помечать этот как error
+
+        // let file = File::open(&self.file_path).unwrap();
+        // let mut reader = BufReader::new(file);
+
+        // reader.seek(SeekFrom::Start(self.offset)).unwrap();
+
+        // let mut i = 0;
+        // let mut line = String::new();
+        // let mut prev_line = String::new();
+        // let mut force_multiline = false;
+
+        // let start_time = cur_time_ms();
+        // // let mut output = File::create(r"Z:\output.txt").unwrap();
+
+        // while let Ok(num) = reader.read_line(&mut line) {
+        //     self.offset = self.offset + (num as u64);
+        //     i = i + 1;
+
+        //     if self.size == self.offset {
+        //         // num == 0
+        //         // EOF check
+
+        //         prev_line = prev_line + &line;
+        //         // println!("----------------------------------------------------");
+        //         // println!(":1:{}", &prev_line);
+        //         // println!(":1:{}", self.log_line_normalizer(&prev_line));
+        //         // writeln!(&mut output, "{}", self.log_line_normalizer(&prev_line)).unwrap();
+        //         self.parse_line(&prev_line);
+        //         break;
+        //     }
+
+        //     if let Some(pos) = line.find("[ ") {
+        //         // срабатывание этих двух условий закрывает у нас мультилайн, а значит
+        //         // запускаем в обработку prev_line
+        //         if pos == 0 {
+        //             // writeln!(&mut output, "{}", self.log_line_normalizer(&prev_line)).unwrap();
+        //             if prev_line.len() != 0 {
+        //                 // println!("----------------------------------------------------");
+        //                 // println!(":2:{}", self.log_line_normalizer(&prev_line));
+        //                 // println!(":2:{}", &prev_line);
+        //                 self.parse_line(&prev_line);
+        //                 // break;
+        //             }
+
+        //             prev_line = line.clone();
+        //             // println!("n   ml: {}", &line);
+        //         } else {
+        //             // тут скорее не мультилайн, а некорректная строка. вообще эта часть условия не должна срабатывать никогда.
+        //             prev_line = prev_line + &line;
+        //         }
+        //     } else {
+        //         prev_line = prev_line + &line;
+        //     }
+
+        //     line.clear();
+        // }
+        println!("parse: end");
+    }
+
+    fn log_line_normalizer<'a>(&'a mut self, line: &String) -> String {
+        let re0 = regex::Regex::new(r"[\r\n]+").unwrap();
+        let re1 = regex::Regex::new(r"<.*?>").unwrap();
+        let re2 = regex::Regex::new(r"█?[\s-]+█").unwrap();
+        let re3 = regex::Regex::new(r"█[\s-]+").unwrap();
+        let re4 = regex::Regex::new(r"█+").unwrap();
+        let re5 = regex::Regex::new(r"█$").unwrap();
+
+        let mut nline: Cow<str> = line.into();
+
+        nline = replaceall_cow(nline, &re0, "");
+        nline = replaceall_cow(nline, &re1, "█");
+        nline = replaceall_cow(nline, &re2, "█");
+        nline = replaceall_cow(nline, &re3, "█");
+        nline = replaceall_cow(nline, &re4, "█");
+        nline = replaceall_cow(nline, &re5, "");
+
+        nline.into_owned()
+    }
+
+    fn parse_line(&mut self, line: &String) {
+        //-> Vec<&str>
+        // println!(":4:{}", &line);
+        let nline = self.log_line_normalizer(&line);
+
+        let mut arr: Vec<&str> = nline.split("█").collect();
+        // println!(
+        //     ":{}:{:?}\n\t{:?} | {:?}",
+        //     arr.len(),
+        //     &nline,
+        //     &arr[0][2..21],
+        //     &arr[0][25..31]
+        // );
+
+        let time = &arr[0][2..21];
+        let message_type = &arr[0][25..31];
+
+        match message_type {
+            "combat" => {
+                println!(":{}:{:?}", arr.len(), &nline);
+            }
+            "None) " => {}
+            "questi" => {}
+            "notify" => {}
+            _ => {}
+        }
+
+        // println!("####################################################");
+        // dbg!(&arr);
+        // arr
+    }
+}
+
+#[derive(Debug)]
+pub struct LogReader {
+    file_path:     PathBuf,
+    bufreader:     Option<std::io::BufReader<File>>,
+    line_buffer:   VecDeque<String>,
+    size:          u64,
+    offset:        u64,
+    header:        Vec<String>,
+    header_offset: u64,
+}
+
+impl LogReader {
+    pub fn new(file_path: PathBuf) -> Result<Self, &'static str> {
+        let meta: Metadata;
+        match file_path.metadata() {
+            Err(e) => return Err("cant get file metadata"),
+            Ok(v) => {
+                meta = v;
+            }
+        }
+
+        let mut this = Self {
+            bufreader:     None,
+            line_buffer:   VecDeque::with_capacity(3),
+            file_path:     file_path,
+            size:          meta.len(),
+            offset:        0,
+            header:        Vec::with_capacity(6),
+            header_offset: 0,
+        };
+
+        // this.check_filename();
+        if let Err(e) = this.check_header() {
+            return Err(e); //FIXME: опять проблема с обоссаной ссылкой. решить потом.
+        }
+
+        Ok(this)
+    }
+
+    fn get_modtime(&mut self) -> u64 {
+        let meta = self.file_path.metadata().unwrap();
+
+        meta.modified()
             .unwrap()
             .duration_since(time::UNIX_EPOCH)
             .unwrap()
-            .as_secs();
-
-        // let time_to_old: u64 = 60 * 360; // 120 minuts
-        // let cur_time = SystemTime::now()
-        //     .duration_since(time::UNIX_EPOCH)
-        //     .unwrap()
-        //     .as_secs();
-
-        self.modified = last_modified;
+            .as_secs()
     }
 
-    fn check_filename(&mut self) {
-        if self.ignored {
-            return;
-        }
+    pub fn is_changed(&mut self) -> bool {
+        let meta = self.file_path.metadata().unwrap();
 
+        return meta.len() > self.offset;
+    }
+
+    pub fn get_details(&mut self) -> Result<(String, u32), &'static str> {
         // выдираем из названия файла UserId
         let fname = self
-            .fpath
+            .file_path
             .file_name()
-            .unwrap()
+            .unwrap_or_else(|| {
+                // panic!("metadata - filename cant get({:?})", error);
+                panic!("metadata - filename cant get");
+            })
             .to_str()
             .map(|s| s.to_string())
-            .unwrap();
+            .unwrap_or_else(|| {
+                // panic!("metadata - filename cant convert to String({:?})", error);
+                panic!("metadata - filename cant convert to String");
+            });
 
         // 20220620_193132_2117846337
         let re_user_id = regex::Regex::new(r"^\d{8}_\d{6}_(\d+).txt$").unwrap();
         if let Some(cap) = re_user_id.captures(&fname) {
-            self.user_id = cap.get(1).unwrap().as_str().parse::<u32>().unwrap();
+            // self.user_id = cap.get(1).unwrap().as_str().parse::<u32>().unwrap();
+            let name = "BLANK Username".to_string();
+            let id = cap.get(1).unwrap().as_str().parse::<u32>().unwrap();
+            return Ok((name, id));
         } else {
-            self.error = "bad file name format(timestamp + user_id)".to_string();
-            self.ignored = true;
+            // self.error = "bad file name format(timestamp + user_id)".to_string();
+            // self.ignored = true;
+            return Err("bad file name format(timestamp + user_id)");
         }
     }
 
-    fn check_header(&mut self) {
-        if self.ignored {
-            return;
-        }
+    /*
+       проверяем на конец файла
+           это конец файла + мультилайн
+               prev_line = prev_line + &line;
+           это конец файла и это самостоятельная строка, а значит
+               let to_ret = tmp_line
+               tmp_line = &line;
+               return
+               потом, в tmp_line записать line, а при след. обращении сразу вернуть line
+           return prev_line;
 
+    if self.bufreader == None()
+        обновитьб всё и запихнуть рейдера
+    if offset==size
+        line_buffer.len()==1 иначе паника. обнуляем рейдер.
+        return self.line_buffer.pop()
+
+    loop читаем строку
+        конец файла ?
+            прочитано 0 байт ?
+                да:
+                    line_buffer.len()==1 иначе паника. обнуляем рейдер.
+                    return self.line_buffer.pop()
+                нет:
+                    прочитанная строка самостоятельная ?
+                        да:
+                            self.line_buffer.push(line)
+                            return self.line_buffer.pop()
+                        нет:
+                            line_buffer.len()==1 иначе паника. обнуляем рейдер.
+                            return self.line_buffer.pop() + &line
+        прочитанная строка самостоятельная ?
+            да:
+                self.line_buffer.push(line)
+                return self.line_buffer.pop()
+            нет:
+                self.line_buffer[0] += &line
+    */
+
+    pub fn read_multiline(&mut self) -> Option<String> {
+        // если self.bufreader отсутствует, то создаём рейдера, устанавливаем длинну файла, до которой мы будем читать
+        match self.bufreader {
+            None => {
+                let meta = self.file_path.metadata().unwrap();
+
+                if self.offset == meta.len() {
+                    return None;
+                }
+
+                self.size = meta.len();
+
+                let file = File::open(&self.file_path).unwrap();
+                let mut bufreader = BufReader::new(file);
+
+                bufreader.seek(SeekFrom::Start(self.offset)).unwrap();
+
+                self.bufreader = Some(bufreader);
+            }
+            _ => (),
+        }
+        // if offset==size
+        //      line_buffer.len()==1 иначе паника. обнуляем рейдер.
+        //      return self.line_buffer.pop()
+        if self.offset == self.size {
+            if self.line_buffer.len() > 1 {
+                panic!("LogReader: end of file and line_buffer contain more that 1 line");
+            }
+            if self.line_buffer.len() == 0 {
+                return None;
+            }
+            self.bufreader = None;
+            return self.line_buffer.pop_front();
+        }
+        // ---------------------------------------------------
+        let mut line = String::new();
+        let mut reader = self.bufreader.as_mut().unwrap();
+        while let Ok(num) = reader.read_line(&mut line) {
+            self.offset = self.offset + (num as u64);
+
+            // ----------------------------------------------------
+            if self.offset == self.size {
+                if num == 0 {
+                    if self.line_buffer.len() > 1 {
+                        panic!("LogReader: end of file and line_buffer contain more that 1 line");
+                    }
+                    self.bufreader = None;
+                    return self.line_buffer.pop_front();
+                } else {
+                    if let Some(pos) = line.find("[ ") {
+                        self.line_buffer.push_back(line);
+                        return self.line_buffer.pop_front();
+                    } else {
+                        if self.line_buffer.len() > 1 {
+                            panic!(
+                                "LogReader: end of file and line_buffer contain more that 1 line"
+                            );
+                        }
+                        return Some(self.line_buffer.pop_front().unwrap() + &line);
+                    }
+                }
+            }
+
+            // ----------------------------------------------------
+            if let Some(pos) = line.find("[ ") {
+                if pos == 0 {
+                    if self.line_buffer.len() == 0 {
+                        self.line_buffer.push_back(line.clone());
+                    } else {
+                        self.line_buffer.push_back(line);
+                        return self.line_buffer.pop_front();
+                    }
+                } else {
+                    // тут скорее не мультилайн, а некорректная строка. вообще эта часть условия не должна срабатывать никогда.
+                    panic!("LogReader: not correct line in log body\n\tline: {line:?}");
+                }
+            } else {
+                self.line_buffer[0] = self.line_buffer[0].clone() + &line;
+            }
+            line.clear();
+        }
+        return None;
+    }
+
+    pub fn check_header(&mut self) -> Result<(), &'static str> {
         let lang: Vec<LogLanguage> = generate_language();
 
-        let file = File::open(&self.fpath).unwrap();
+        let file = File::open(&self.file_path).unwrap();
         let mut reader = BufReader::new(file);
 
-        let mut err = false;
         //log header example:
         //1   ------------------------------------------------------------
         //2     Gamelog
@@ -121,15 +418,14 @@ impl Log {
         let mut offset: usize = 0;
         while let Ok(num) = reader.read_line(&mut line) {
             i = i + 1;
-
-            println!(
-                "i:{:3}|of: {:5} +{:4}->{:5}| s: {}",
-                &i,
-                &offset,
-                &num,
-                (offset + num),
-                &line.trim_end()
-            );
+            // println!(
+            //     "i:{:3}|of: {:5} +{:4}->{:5}| s: {}",
+            //     &i,
+            //     &offset,
+            //     &num,
+            //     (offset + num),
+            //     &line.trim_end()
+            // );
 
             offset = offset + num;
             if num == 0 {
@@ -141,138 +437,71 @@ impl Log {
             match i {
                 0 => {
                     if line.contains("------------") == false {
-                        err = true;
+                        return Err("Header parse error: line #0");
                     }
                 }
-                1 => {}
+                1 => {
+                    let re = regex::Regex::new(r"^\s\s.*\r?\n").unwrap();
+                    if !re.is_match(&line) {
+                        return Err("Header parse error: line #1");
+                    }
+                }
                 2 => {
-                    // println!("\tline:{:?}", line.trim());
-                    let mut m = 0;
-                    for re in &lang {
-                        if !re.character.is_match(&line) {
-                            continue;
-                        }
+                    // =~/\s\s.*\:.*\n/
+                    let re = regex::Regex::new(r"^\s\s.*:.*\r?\n").unwrap();
+                    if !re.is_match(&line) {
+                        return Err("Header parse error: line #2");
+                    }
+                    // // println!("\tline:{:?}", line.trim());
+                    // let mut m = 0;
+                    // for re in &lang {
+                    //     if !re.character.is_match(&line) {
+                    //         continue;
+                    //     }
 
-                        if let Some(cap) = re.character.captures(&line) {
-                            // println!("\t+ {:?}", re.language);
-                            self.language = re.language.clone();
-                            self.user_name = cap.get(1).unwrap().as_str().to_owned();
-                            break;
-                        } else {
-                            // println!("\t- {:?}", re.language);
-                        }
+                    //     if let Some(cap) = re.character.captures(&line) {
+                    //         // println!("\t+ {:?}", re.language);
+                    //         // self.language = re.language.clone();
+                    //         // self.user_name = cap.get(1).unwrap().as_str().to_owned();
+                    //         break;
+                    //     } else {
+                    //         // println!("\t- {:?}", re.language);
+                    //     }
+                    // }
+                }
+                3 => {
+                    // =~/\s\s.*\:\d{4}\.\d{2}\.\d{4}\s\d{2}\:\d{2}\:\d{2}\n/
+                    let re =
+                        regex::Regex::new(r"\s\s.*:\s+\d{4}.\d{2}.\d{2}\s\d{2}:\d{2}:\d{2}\r?\n")
+                            .unwrap();
+                    if !re.is_match(&line) {
+                        // eprintln!("Header parse:\n\tline: {line:?}");
+                        return Err("Header parse error: line #3");
                     }
                 }
-                3 => {}
                 4 => {
                     if !line.contains("------------") {
-                        err = true;
+                        return Err("Header parse error: line #4");
                     }
                     self.offset = offset as u64;
+                    self.header_offset = self.offset;
                     // self.offset = reader.stream_position().unwrap();
+                    // break;
                 }
                 _ => {
                     break;
                 }
             };
+            self.header.push(line.clone());
 
             line.clear();
         }
 
-        if err {
-            self.error.push_str("error in header parse");
-        }
-    }
-
-    fn is_changed(&mut self) -> bool {
-        let meta = self.fpath.metadata().unwrap();
-
-        let modified = meta
-            .modified()
-            .unwrap()
-            .duration_since(time::UNIX_EPOCH)
-            .unwrap()
-            .as_secs();
-
-        if meta.len() > self.offset {
-            self.size = meta.len();
-            return true;
-        } else {
-            return false;
-        }
-    }
-
-    // reader.seek(SeekFrom::Start(1653147)).unwrap();
-    // let current_pos = reader
-    //     .seek(SeekFrom::Current(0))
-    //     .expect("Could not get current position!");
-    pub fn parse(&mut self) {
-        println!("parse: start");
-        // fs::metadata(&path).unwrap();
-        // let meta = self.fpath.metadata().unwrap();
-
-        if !self.is_changed() {
-            println!("parse: end(not changed)");
-            return;
+        if self.header.len() != 5 {
+            return Err("Header parse error: header contains less that 5 lines");
         }
 
-        // FIXME: надо будет ещё добавить проверку на уменьшение файла с момента последнего чтения. если такое произошло, то наверно надо вообще пересоздавать объект или помечать этот как error
-
-        let file = File::open(&self.fpath).unwrap();
-        let mut reader = BufReader::new(file);
-
-        reader.seek(SeekFrom::Start(self.offset)).unwrap();
-
-        let mut i = 0;
-        let mut line = String::new();
-        while let Ok(num) = reader.read_line(&mut line) {
-            if num == 0 {
-                // EOF check
-                line.clear();
-                break;
-            }
-            i = i + 1;
-            self.offset = self.offset + (num as u64);
-
-            // self.parse_line(line.clone());
-            println!("----------------------------------------------------");
-            println!("{:?}", self.log_line_normalizer(&line));
-
-            line.clear();
-            // важный момент - читаем не пока reader выдаёт нам строки, а только до self.size.
-            // если во время нашего чтения из файла в него будут добавлены ещё строки, то reader сможет прочитать и их, без пересоздания BufReader, а это выдаёт некоторые артефакты.
-            if self.size == self.offset {
-                break;
-            } else if self.offset > self.size {
-                panic!("read file: self.offset > self.size");
-            }
-        }
-        println!("parse: end");
-    }
-
-    fn parse_line<'a>(&mut self, line: String) {
-        //-> Vec<&str>
-        let nline = self.log_line_normalizer(&line);
-
-        let mut arr: Vec<&str> = nline.split("█").collect();
-
-        dbg!(&arr);
-        // arr
-    }
-    fn log_line_normalizer<'a>(&'a mut self, line: &String) -> String {
-        let re1 = regex::Regex::new(r"<.*?>").unwrap();
-        let re2 = regex::Regex::new(r"█?[\s-]+█").unwrap();
-        let re3 = regex::Regex::new(r"█[\s-]+").unwrap();
-        let re4 = regex::Regex::new(r"█+").unwrap();
-
-        let mut nline: Cow<str> = line.into();
-
-        nline = replaceall_cow(nline, &re1, "█");
-        nline = replaceall_cow(nline, &re2, "█");
-        nline = replaceall_cow(nline, &re3, "█");
-        nline = replaceall_cow(nline, &re4, "█");
-
-        nline.into_owned()
+        Ok(())
     }
 }
 
@@ -284,4 +513,11 @@ fn replaceall_cow<'a>(cow: Cow<'a, str>, regex: &Regex, replacement: &str) -> Co
 }
 fn dbg<T>(_: &T) {
     println!("{}", std::any::type_name::<T>())
+}
+
+fn cur_time_ms() -> u128 {
+    SystemTime::now()
+        .duration_since(time::UNIX_EPOCH)
+        .unwrap()
+        .as_millis()
 }
