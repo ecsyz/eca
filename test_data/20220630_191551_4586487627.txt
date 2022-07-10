@@ -1,0 +1,50 @@
+------------------------------------------------------------
+  Gamelog
+  Listener: Test User Name
+  Session Started: 2022.06.30 19:15:51
+------------------------------------------------------------
+[ 2022.06.30 19:47:09 ] (combat) <color=0xffccff66><b>640</b><color=0x77ffffff><font size=10> remote armor repaired to </font><b><color=0xffffffff><fontsize=12><color=0xFFFEBB64><b> <u>Leshak</u></b></color></fontsize><fontsize=12><color=0xFFFEFF6F> [REKTD]</color></fontsize> <fontsize=10><b>[PSST.]</b></fontsize>
+<fontsize=10> [Dalliloule Nardieu]</fontsize><color=0xFFFFFFFF><b> -</b><color=0x77ffffff><font size=10> - Large Remote Armor Repairer II</font>
+[ 2022.06.30 19:16:40 ] (None) Undocking from Kaunokka V - Veles Clade Porevitium Vault to Kaunokka solar system.
+[ 2022.06.30 19:29:36 ] (notify) Krirald Traffic Control is currently offline and unable to process your jump request. Please try again in a moment.
+[ 2022.06.30 19:30:23 ] (question) You are about to exit simulation mode. Any progress you have made on your currently simulated ship will be lost.<br><br>Are you sure you want to continue?
+[ 2022.06.30 19:32:10 ] (notify) Ship stopping
+[ 2022.06.30 19:40:59 ] (combat) <color=0xffcc0000><b>23</b> <color=0x77ffffff><font size=10>from</font> <b><color=0xffffffff>Faded Hypnosian Preserver</b><font size=10><color=0x77ffffff> - Penetrates
+[ 2022.06.30 19:45:00 ] (question) <a href="showinfo:1377//2118430428">Dalliloule Nardieu</a> wants you to join their fleet, do you accept?
+
+<br><br>
+
+NOTE: Attacking members of your fleet is not a CONCORD sanctioned activity and may result in security status loss and police response.
+
+
+[ 2022.06.30 19:47:09 ] (combat) <color=0xffccff66><b>640</b><color=0x77ffffff><font size=10> remote armor repaired to </font><b><color=0xffffffff><fontsize=12><color=0xFFFEBB64><b> <u>Leshak</u></b></color></fontsize><fontsize=12><color=0xFFFEFF6F> [REKTD]</color></fontsize> <fontsize=10><b>[PSST.]</b></fontsize>
+<fontsize=10> [Dalliloule Nardieu]</fontsize><color=0xFFFFFFFF><b> -</b><color=0x77ffffff><font size=10> - Large Remote Armor Repairer II</font>
+[ 2022.06.30 21:03:26 ] (combat) <color=0xffccff66><b>0</b><color=0x77ffffff><font size=10> remote armor repaired by </font><b><color=0xffffffff><fontsize=12><color=0xFFFEBB64><b> <u>Leshak</u></b></color></fontsize><fontsize=12><color=0xFFFEFF6F> [REKTD]</color></fontsize> <fontsize=10><b>[PSST.]</b></fontsize>
+<fontsize=10> [Dalliloule Nardieu]</fontsize><color=0xFFFFFFFF><b> -</b><color=0x77ffffff><font size=10> - Large Remote Armor Repairer II</font>
+[ 2022.06.30 21:03:26 ] (combat) <color=0xffcc0000><b>81</b> <color=0x77ffffff><font size=10>from</font> <b><color=0xffffffff>VLAD86[WTFNA](Paladin)</b><font size=10><color=0x77ffffff> - Khanid Navy Large EMP Smartbomb - Hits
+[ 2022.06.30 21:03:27 ] (combat) <color=0xffcc0000><b>81</b> <color=0x77ffffff><font size=10>from</font> <b><color=0xffffffff>VLAD86[WTFNA](Paladin)</b><font size=10><color=0x77ffffff> - Imperial Navy Large EMP Smartbomb - Hits
+[ 2022.06.30 21:03:27 ] (combat) <color=0xffccff66><b>632</b><color=0x77ffffff><font size=10> remote armor repaired to </font><b><color=0xffffffff><fontsize=12><color=0xFFFEBB64><b> <u>Leshak</u></b></color></fontsize><fontsize=12><color=0xFFFEFF6F> [REKTD]</color></fontsize> <fontsize=10><b>[PSST.]</b></fontsize>
+<fontsize=10> [Dalliloule Nardieu]</fontsize><color=0xFFFFFFFF><b> -</b><color=0x77ffffff><font size=10> - Large Remote Armor Repairer II</font>
+[ 2022.06.30 21:03:29 ] (combat) <color=0xffffffff><b>Warp scramble attempt</b> <color=0x77ffffff><font size=10>from</font> <color=0xffffffff><b>Raznaborg Anchoring Damavik</b> <color=0x77ffffff><font size=10>to <b><color=0xffffffff></font><fontsize=12><color=0xFFFEBB64><b> <u>Leshak</u></b></color></fontsize><fontsize=12><color=0xFFFEFF6F> [CMWTH]</color></fontsize> <fontsize=10><b>[BPSH]</b></fontsize>
+<fontsize=10> [ReZite NorDen]</fontsize><color=0xFFFFFFFF><b> -
+[ 2022.06.30 21:03:29 ] (combat) <color=0xffcc0000><b>82</b> <color=0x77ffffff><font size=10>from</font> <b><color=0xffffffff>GodOfArt[RUSFC](Vargur)</b><font size=10><color=0x77ffffff> - Imperial Navy Large EMP Smartbomb - Hits
+[ 2022.06.30 21:03:29 ] (combat) <color=0xffcc0000><b>82</b> <color=0x77ffffff><font size=10>from</font> <b><color=0xffffffff>GodOfArt[RUSFC](Vargur)</b><font size=10><color=0x77ffffff> - Imperial Navy Large EMP Smartbomb - Hits
+[ 2022.06.30 21:03:30 ] (combat) <color=0xffccff66><b>351</b><color=0x77ffffff><font size=10> remote capacitor transmitted to </font><b><color=0xffffffff><fontsize=12><color=0xFFFEBB64><b> <u>Leshak</u></b></color></fontsize><fontsize=12><color=0xFFFEFF6F> [REKTD]</color></fontsize> <fontsize=10><b>[SPSFC]</b></fontsize>
+<fontsize=10> [FWC]</fontsize><color=0xFFFFFFFF><b> -</b><color=0x77ffffff><font size=10> - Large Remote Capacitor Transmitter II</font>
+[ 2022.06.30 19:46:55 ] (combat) <color=0xffccff66><b>640</b><color=0x77ffffff><font size=10> remote armor repaired to </font><b><color=0xffffffff><fontsize=12><color=0xFFFEBB64><b> <u>Leshak</u></b></color></fontsize><fontsize=12><color=0xFFFEFF6F> [REKTD]</color></fontsize> <fontsize=10><b>[PSST.]</b></fontsize>
+<fontsize=10> [Dalliloule Nardieu]</fontsize><color=0xFFFFFFFF><b> -</b><color=0x77ffffff><font size=10> - Large Remote Armor Repairer II</font>
+[ 2022.06.30 19:46:55 ] (combat) <color=0xffccff66><b>640</b><color=0x77ffffff><font size=10> remote armor repaired to </font><b><color=0xffffffff><fontsize=12><color=0xFFFEBB64><b> <u>Leshak</u></b></color></fontsize><fontsize=12><color=0xFFFEFF6F> [REKTD]</color></fontsize> <fontsize=10><b>[PSST.]</b></fontsize>
+<fontsize=10> [Dalliloule Nardieu]</fontsize><color=0xFFFFFFFF><b> -</b><color=0x77ffffff><font size=10> - Large Remote Armor Repairer II</font>
+[ 2022.06.30 19:47:21 ] (combat) <color=0xffccff66><b>640</b><color=0x77ffffff><font size=10> remote armor repaired by </font><b><color=0xffffffff><fontsize=12><color=0xFFFEBB64><b> <u>Leshak</u></b></color></fontsize><fontsize=12><color=0xFFFEFF6F> [REKTD]</color></fontsize> <fontsize=10><b>[PSST.]</b></fontsize>
+<fontsize=10> [Dalliloule Nardieu]</fontsize><color=0xFFFFFFFF><b> -</b><color=0x77ffffff><font size=10> - Large Remote Armor Repairer II</font>
+[ 2022.06.30 19:47:21 ] (combat) <color=0xffccff66><b>640</b><color=0x77ffffff><font size=10> remote armor repaired by </font><b><color=0xffffffff><fontsize=12><color=0xFFFEBB64><b> <u>Leshak</u></b></color></fontsize><fontsize=12><color=0xFFFEFF6F> [REKTD]</color></fontsize> <fontsize=10><b>[PSST.]</b></fontsize>
+<fontsize=10> [Dalliloule Nardieu]</fontsize><color=0xFFFFFFFF><b> -</b><color=0x77ffffff><font size=10> - Large Remote Armor Repairer II</font>
+[ 2022.06.30 19:47:26 ] (combat) <color=0xffccff66><b>119</b><color=0x77ffffff><font size=10> remote capacitor transmitted to </font><b><color=0xffffffff><fontsize=12><color=0xFFFEBB64><b> <u>Leshak</u></b></color></fontsize><fontsize=12><color=0xFFFEFF6F> [REKTD]</color></fontsize> <fontsize=10><b>[SPSFC]</b></fontsize>
+<fontsize=10> [FWC]</fontsize><color=0xFFFFFFFF><b> -</b><color=0x77ffffff><font size=10> - Large Remote Capacitor Transmitter II</font>
+[ 2022.06.30 19:47:27 ] (combat) Raznaborg Renewing Leshak misses you completely
+[ 2022.06.30 19:47:26 ] (combat) <color=0xffe57f7f><b>19 GJ</b><color=0x77ffffff><font size=10> energy neutralized </font><b><color=0xffffffff>Starving Damavik</b><color=0x77ffffff><font size=10> - Starving Damavik</font>
+[ 2022.06.30 19:47:26 ] (combat) Hospodar Liminal Drekavac misses you completely
+[ 2022.06.30 19:47:28 ] (combat) <color=0xffccff66><b>351</b><color=0x77ffffff><font size=10> remote capacitor transmitted by </font><b><color=0xffffffff><fontsize=12><color=0xFFFEBB64><b> <u>Leshak</u></b></color></fontsize><fontsize=12><color=0xFFFEFF6F> [REKTD]</color></fontsize> <fontsize=10><b>[PSST.]</b></fontsize>
+<fontsize=10> [Dalliloule Nardieu]</fontsize><color=0xFFFFFFFF><b> -</b><color=0x77ffffff><font size=10> - Large Remote Capacitor Transmitter II</font>
+[ 2022.06.30 19:47:30 ] (combat) <color=0xffe57f7f><b>19 GJ</b><color=0x77ffffff><font size=10> energy neutralized </font><b><color=0xffffffff>Starving Damavik</b><color=0x77ffffff><font size=10> - Starving Damavik</font>
+[ 2022.06.30 19:47:30 ] (combat) Hospodar Liminal Drekavac misses you completely

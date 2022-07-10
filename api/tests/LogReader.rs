@@ -6,74 +6,49 @@
 #![allow(unused_assignments)]
 #![allow(non_snake_case)]
 
-use std::{env, fs, path::PathBuf};
+use std::{collections::HashMap, env, fs, path::PathBuf};
 
 use api::log::*;
 
-#[test]
-fn test_1() {
-    assert_eq!(4, 4);
-    _ = env::set_current_dir(r"..\test_data");
-
-    assert!(
-        fs::metadata(r"20220630_191551_0000000000.txt").is_ok(),
-        "test file with simple lines not found"
-    );
-
-    assert!(fs::metadata(r"20220630_191551_2117846337.txt").is_ok());
-    assert!(fs::metadata(r"20220630_191551_2117846338.txt").is_ok());
+fn lr_pb_new(s: &str) -> Result<LogReader, &'static str> {
+    let path = r"..\test_data\";
+    LogReader::new(PathBuf::from(format!("{path}{s}")))
 }
 
 #[test]
 fn new_ok() {
-    _ = env::set_current_dir(r"..\test_data");
-
-    let lr = LogReader::new(PathBuf::from(r"20220630_191551_0000000000.txt"));
-    assert!(
-        lr.is_ok(),
-        "create logreader from '20220630_191551_0000000000.txt' ({lr:?})"
-    );
-
-    let lr = LogReader::new(PathBuf::from(r"20220630_191551_2117846337.txt"));
-    assert!(
-        lr.is_ok(),
-        "create logreader from '20220630_191551_2117846337.txt' ({lr:?})"
-    );
-
-    let lr = LogReader::new(PathBuf::from(r"20220630_191551_2117846338.txt"));
-    assert!(
-        lr.is_ok(),
-        "create logreader from '20220630_191551_2117846338.txt' ({lr:?})"
-    );
+    let list = HashMap::from([
+        (
+            r"20220630_191551_0000000000.txt",
+            "20220630_191551_0000000000.txt",
+        ),
+        (
+            r"20220630_191551_4586487627.txt",
+            "20220630_191551_4586487627.txt",
+        ),
+        (
+            r"20220630_191551_8779804650.txt",
+            "20220630_191551_8779804650.txt",
+        ),
+    ]);
+    for (k, v) in list {
+        let res = lr_pb_new(k);
+        assert!(res.is_ok(), "{v}\ndump: {res:?}");
+    }
 }
 
 #[test]
 fn new_err() {
-    // file not exists
-    let lr = LogReader::new(PathBuf::from(r"20220630_191551_2117846338.txt"));
-    assert!(lr.is_err(), "{lr:?}");
-
-    // only launcher log
-    let lr = LogReader::new(PathBuf::from(r"..\test_data\bad_log\20220101_111111.txt"));
-    assert!(lr.is_err(), "{lr:?}");
-
-    // Bad Header #1
-    let lr = LogReader::new(PathBuf::from(
-        r"..\test_data\bad_log\20220101_111111_0000000001.txt",
-    ));
-    assert!(lr.is_err(), "{lr:?}");
-
-    // Bad Header #2
-    let lr = LogReader::new(PathBuf::from(
-        r"..\test_data\bad_log\20220101_111111_0000000002.txt",
-    ));
-    assert!(lr.is_err(), "{lr:?}");
-
-    // // Bad Header #3 - cant detect language
-    // let lr = LogReader::new(PathBuf::from(
-    //     r"..\test_data\bad_log\20220101_111111_0000000003.txt",
-    // ));
-    // assert!(lr.is_err(), "{lr:?}");
+    let list = HashMap::from([
+        (r"bad_log\20220630_123456_1234567890.txt", "file not exists"),
+        (r"bad_log\20220101_111111.txt", "only launcher log"),
+        (r"bad_log\20220101_111111_0000000001.txt", "Bad Header #1"),
+        (r"bad_log\20220101_111111_0000000002.txt", "Bad Header #2"),
+    ]);
+    for (k, v) in list {
+        let res = lr_pb_new(k);
+        assert!(res.is_err(), "{v}\ndump: {res:?}");
+    }
 }
 
 // #[test]
