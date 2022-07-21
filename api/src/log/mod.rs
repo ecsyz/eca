@@ -1,3 +1,5 @@
+#![allow(non_snake_case)]
+
 use regex;
 use regex::Regex;
 use std::borrow::Cow;
@@ -12,6 +14,7 @@ use std::time::{self, Duration, SystemTime};
 use std::{env, fs};
 
 include!("language.rs");
+pub mod log_entry;
 
 #[derive(Debug)]
 pub struct Log {
@@ -124,6 +127,7 @@ impl Log {
         nline = replaceall_cow(nline, &re3, "█");
         nline = replaceall_cow(nline, &re4, "█");
         nline = replaceall_cow(nline, &re5, "");
+        nline = replaceall_cow(nline, &re6, "█");
         nline = replaceall_cow(nline, &re7, "█");
 
         nline.into_owned()
@@ -150,7 +154,12 @@ impl Log {
 
         match message_type {
             "combat" => {
-                // println!("\n:{}:{:?}", arr.len(), &nline);
+                println!(
+                    "--------------------------------------\n◄◄◄RAW►►►:  {line:?}\n=>\n◄◄◄NORM►►►:  {}:{:?}",
+                    arr.len(),
+                    &nline
+                );
+                let mut le = log_entry::LogEntry::n(&arr[0][2..21]);
 
                 match arr.len() {
                     5 => {
@@ -160,58 +169,102 @@ impl Log {
                         // :5:"[ 2022.06.30 19:33:15 ] (combat)█20 GJ█energy neutralized█Faded Hypnosian Warden█Faded Hypnosian Warden"
                         // <0:time+other> | <1:energy_amounte> | <2:action> | <3:enemy_name> | <4:enemy_name>
                         if arr[2] == lang.damage_in {
-                            println!("\ndamage_in_pve\n:{}:{nline:?}\n{arr:?}", arr.len());
+                            // println!("\ndamage_in_pve\n:{}:{nline:?}\n{arr:?}", arr.len());
+                            le.act("damage_deal")
+                                .amount_str(arr[1])
+                                .module("npc_weapon")
+                                .from(arr[3])
+                                .to(self.user_name.as_str());
                         } else if arr[2] == lang.cap_neutralized_in {
-                            println!("\ncap_neut_in\n:{}:{nline:?}\n{arr:?}", arr.len());
+                            // println!("\ncap_neut_in\n:{}:{nline:?}\n{arr:?}", arr.len());
+                            // :5:"[ 2022.06.30 19:33:15 ] (combat)█20 GJ█energy neutralized█Faded Hypnosian Warden█Faded Hypnosian Warden"
+
+                            let mut amount: Vec<&str> = arr[1].split(" ").collect();
+                            le.act("energy_neut")
+                                .amount_str(amount[0])
+                                .module("npc_neut")
+                                .from(arr[3])
+                                .to(self.user_name.as_str());
                         } else {
-                            println!("\n5:UNSUPORTED\n:{}:{nline:?}\n{arr:?}", arr.len());
+                            // 5:"[ 2022.07.16 14:07:09 ] (combat)█318█единиц запаса прочности брони получено дистанционным ремонтом от█Guardian* &lt;REKTD&gt;[PSST.] Dalliloule Nardieu█Medium Remote Armor Repairer II"
+                            // 5:"[ 2022.07.16 14:07:10 ] (combat)█955█единиц запаса прочности брони получено дистанционным ремонтом от█Nestor* &lt;CMWTH&gt;[BPSH] MiraRoseQ█Large Remote Armor Repairer II"
+                            println!("◄◄◄UNSUPORTED►►►: {}:{nline:?}\n{arr:?}", arr.len());
                         }
                     }
                     6 => {
                         // <0:time+other> | <1:damage> | <2:to|from|action> | <3:enemy_name> | <4:weapon_type> | <5:hit_type>
                         if arr[2] == lang.damage_in && arr[4] == lang.damage_out {
                             // :6:"[ 2022.01.19 18:31:06 ] (combat)█Warp scramble attempt█from█Raznaborg Anchoring Damavik█to█State Navy Rook"
-                            println!("\nmodule use\n:{}:{nline:?}\n{arr:?}", arr.len());
+                            // println!("\nmodule use\n:{}:{nline:?}\n{arr:?}", arr.len());
+                            le.act("module_use")
+                                .amount(0)
+                                .module(arr[1])
+                                .from(arr[3])
+                                .to(arr[5]);
                         } else if arr[2] == lang.damage_out {
-                            println!("\ndamage_out\n:{}:{nline:?}\n{arr:?}", arr.len());
+                            // :6:"[ 2022.06.30 19:46:39 ] (combat)█1814█to█Raznaborg Blinding Leshak█Veles Supratidal Entropic Disintegrator█Smashes"
+                            //                      0                 1   2                3                         4                           5
+                            // println!("\ndamage_out\n:{}:{nline:?}\n{arr:?}", arr.len());
+                            le.act("damage_deal")
+                                .amount(0)
+                                .module(arr[4])
+                                .from(self.user_name.as_str())
+                                .to(arr[3]);
                         } else if arr[2] == lang.damage_in {
-                            println!("\ndamage_in_pvp\n:{}:{nline:?}\n{arr:?}", arr.len());
+                            // 6:"[ 2022.07.16 13:54:35 ] (combat)█23█из█Scout Republic Fleet Scimitar█Guristas Mjolnir Heavy Missile█Попал"
+                            // :6:"[ 2022.06.30 21:03:29 ] (combat)█82█from█Username[CTAG](Vargur)█Imperial Navy Large EMP Smartbomb█Hits"
+                            //                    0                 1    2             3                            4                  5
+                            // println!("\ndamage_in_pvp\n:{}:{nline:?}\n{arr:?}", arr.len());
+                            le.act("damage_deal")
+                                .amount_str(arr[1])
+                                .module(arr[4])
+                                .from_adv(arr[3])
+                                .to(self.user_name.as_str())
+                                .hit_type(arr[5]);
                         } else {
                             // UNSUPORTED
-                            println!("\n6:UNSUPORTED\n:{}:{nline:?}\n{arr:?}", arr.len());
+                            // :6:"[ 2022.07.16 15:21:37 ] (combat)█You're█jammed█by█State Navy Kitsune█State Navy Kitsune"
+                            // 6:"[ 2022.07.16 14:06:18 ] (combat)█Попытка варп-глушения:█источник█Anchoring Kikimora█цель█Imperial Navy Crusader"
+
+                            println!("◄◄◄UNSUPORTED►►►: {}:{nline:?}\n{arr:?}", arr.len());
                         }
                     }
                     8 => {
-                        if arr[2] == lang.armor_repaired_out {
-                            println!("\narmor_repaired_out\n:{}:{nline:?}\n{arr:?}", arr.len());
-                        } else if arr[2] == lang.hull_repaired_out {
-                            println!("\nhull_repaired_out\n:{}:{nline:?}\n{arr:?}", arr.len());
-                        } else if arr[2] == lang.shield_boosted_out {
-                            println!("\nshield_boosted_out\n:{}:{nline:?}\n{arr:?}", arr.len());
-                        } else if arr[2] == lang.armor_repaired_in {
-                            println!("\narmor_repaired_in\n:{}:{nline:?}\n{arr:?}", arr.len());
-                        } else if arr[2] == lang.hull_repaired_in {
-                            println!("\nhull_repaired_in\n:{}:{nline:?}\n{arr:?}", arr.len());
-                        } else if arr[2] == lang.shield_boosted_in {
-                            println!("\nshield_boosted_in\n:{}:{nline:?}\n{arr:?}", arr.len());
-                        } else if arr[2] == lang.cap_transfered_out {
-                            println!("\ncap_transfered_out\n:{}:{nline:?}\n{arr:?}", arr.len());
-                        } else if arr[2] == lang.cap_neutralized_out {
-                            println!("\ncap_neutralized_out\n:{}:{nline:?}\n{arr:?}", arr.len());
-                        } else if arr[2] == lang.nos_recieved {
-                            println!("\nnos_recieved\n:{}:{nline:?}\n{arr:?}", arr.len());
-                        } else if arr[2] == lang.cap_transfered_in {
-                            println!("\ncap_transfered_in\n:{}:{nline:?}\n{arr:?}", arr.len());
-                        } else if arr[2] == lang.cap_neutralized_in {
-                            println!("\ncap_neutralized_in\n:{}:{nline:?}\n{arr:?}", arr.len());
-                        } else if arr[2] == lang.nos_taken {
-                            println!("\nnos_taken\n:{}:{nline:?}\n{arr:?}", arr.len());
+                        let d_only = regex::Regex::new(r"^\d+$").unwrap();
+                        let cap = regex::Regex::new(r"[+-]?\d+\s.*$").unwrap();
+                        if d_only.is_match(&arr[1]) {
+                            // :8:"[ 2022.06.30 19:47:13 ] (combat)█351█remote capacitor transmitted by█Leshak█[REKTD]█[PSST.]█[Dalliloule Nardieu]█Large Remote Capacitor Transmitter II"
+                            // :8:"[ 2022.06.30 19:47:21 ] (combat)█640█remote armor repaired by█Leshak█[REKTD]█[PSST.]█[Dalliloule Nardieu]█Large Remote Armor Repairer II"
+                            //                  0                    1             2                3      4       5           6                     7
+                            // 5:"[ 2022.07.16 14:07:05 ] (combat)█958█единиц запаса прочности брони получено дистанционным ремонтом от█Nestor* &lt;CMWTH&gt;[BPSH] MiraRoseQ█Large Remote Armor Repairer II"
+                            le.act("module_use").amount_str(arr[1]).module(arr[7]);
+                            if arr[2] == lang.armor_repaired_in
+                                || arr[2] == lang.hull_repaired_in
+                                || arr[2] == lang.shield_boosted_in
+                                || arr[2] == lang.cap_transfered_in
+                            {
+                                le.from(&arr[6][1..arr[6].len() - 1])
+                                    .to(self.user_name.as_str());
+                            } else if arr[2] == lang.armor_repaired_out
+                                || arr[2] == lang.hull_repaired_out
+                                || arr[2] == lang.shield_boosted_out
+                                || arr[2] == lang.cap_transfered_out
+                            {
+                                le.to(&arr[6][1..arr[6].len() - 1])
+                                    .from(self.user_name.as_str());
+                            }
+                        } else if cap.is_match(&arr[1]) {
+                            //FIXME: доделать ... наверное
                         } else {
-                            // UNSUPORTED
-                            println!("\n8:UNSUPORTED\n:{}:{nline:?}\n{arr:?}", arr.len());
+                            println!("◄◄◄UNSUPORTED►►►: {}:{nline:?}\n{arr:?}", arr.len());
                         }
                     }
-                    _ => {}
+                    // 9 => {
+                    //     // 9:"[ 2022.07.16 14:07:00 ] (combat)█Warp scramble attempt█from█Elite Imperial Navy Crusader█to█Megathron█[REKTD]█[PSST.]█[lles gayt]"
+                    // }
+                    _ => {
+                        println!("◄◄◄UNSUPORTED_►►►: {}:{nline:?}\n{arr:?}", arr.len());
+                    }
                 }
                 // damage_out,          :r#"to"#,
                 // damage_in,           :r#"from"#,
@@ -228,9 +281,6 @@ impl Log {
                 // cap_neutralized_in,  :r#"energy neutralized"#,
                 // nos_taken,           :r#"energy drained to"#,
                 // IN damage
-                // :5:"[ 2022.06.30 19:47:05 ] (combat)█39█from█Anchoring Damavik█Glances Off"
-                // IN energy neutralized
-                // :5:"[ 2022.06.30 19:33:15 ] (combat)█20 GJ█energy neutralized█Faded Hypnosian Warden█Faded Hypnosian Warden"
 
                 // OUT damage
                 // :6:"[ 2022.06.30 19:46:39 ] (combat)█1814█to█Raznaborg Blinding Leshak█Veles Supratidal Entropic Disintegrator█Smashes"
@@ -249,6 +299,9 @@ impl Log {
 
                 // ????
                 // :8:"[ 2022.06.30 20:34:35 ] (combat)█Warp scramble attempt█from█Hospodar Anchoring Damavik█to█Paladin█[WTFNA]█[VLAD86]"
+                if le.action != "" {
+                    println!("◄◄◄JSON►►►: {}", serde_json::to_string(&le).unwrap());
+                }
             }
             "None) " => {}
             "questi" => {}
